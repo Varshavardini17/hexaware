@@ -1,10 +1,12 @@
-IF DB_ID('PetPals') IS NULL
-BEGIN
-    CREATE DATABASE PetPals;
-END
-GO
-USE PetPals;
-GO
+BEGIN TRY
+    USE PetPals
+    PRINT 'Database exists.'
+END TRY
+
+BEGIN CATCH
+    PRINT 'Database does not exist or cannot be accessed.'
+END CATCH
+
 
 ---TABLE 1
 CREATE TABLE Shelters (
@@ -157,6 +159,7 @@ SELECT * FROM Shelters;
 -----------------------------------------Q8 CALCULATE AND RETRIEVE THE TOTAL DONATION AMOUNT FOR EACH SHELTER--------------------------
 ALTER TABLE Donations
 ADD ShelterID INT;
+
 ALTER TABLE Donations
 ADD CONSTRAINT FK_Donations_Shelters
 FOREIGN KEY (ShelterID) REFERENCES Shelters(ShelterID);
