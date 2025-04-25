@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Assets</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+            position: fixed;
+        }
+        .sidebar a {
+            padding: 15px;
+            display: block;
+            color: white;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+        .content {
+            margin-left: 250px;
+            width: 100%;
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="sidebar">
+        <h4 class="text-center">Employee Panel</h4>
+        <a href="empdash.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="empasset.html"><i class="fas fa-box"></i> My Assets</a>
+        <a href="empreq.html"><i class="fas fa-file-alt"></i> Request Asset</a>
+        <a href="returnasset.html"><i class="fas fa-undo"></i> Return Asset</a>
+        <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+        <a href="logout.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="content">
+        <h2>My Assets</h2>
+        <div id="loading" class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading your assets...</p>
+        </div>
+        <div id="error-message" class="error-message" style="display: none;"></div>
+        <table id="assets-table" class="table table-bordered mt-4" style="display: none;">
+            <thead class="table-dark">
+                <tr>
+                    <th>Asset Name</th>
+                    <th>Status</th>
+                    <th>Assigned Date</th>
+                </tr>
+            </thead>
+            <tbody id="assets-table-body">
+                <!-- Asset data will be loaded here dynamically -->
+            </tbody>
+        </table>
+        <div id="no-assets" style="display: none;" class="alert alert-info mt-4">
+            You don't have any assets assigned to you currently.
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const employeeId = localStorage.getItem('employeeId');  // Fetch the employeeId from localStorage
+            
+            // Check if employeeId is available in localStorage (logged-in check)
+            if (!employeeId) {
+                window.location.href = "login.html"; // Redirect to login if not logged in
+                return;
+            }
+
+            // If logged in, fetch the assets for the logged-in user
+            fetchAssets(employeeId);
+        });
+    
+        function fetchAssets(employeeId) {
+            const loadingElement = document.getElementById('loading');
+            const tableElement = document.getElementById('assets-table');
+            const errorElement = document.getElementById('error-message');
+            const noAssetsElement = document.getElementById('no-assets');
+            
+            // Log the employee ID to ensure we are sending the correct one
+            console.log('Fetching assets for employee ID:', employeeId);
+            
+            fetch('http://localhost:5000/get_assets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ employee_id: employeeId })
+            })
+            .then(response => response.json()) // Parse the JSON response
+            .then(data => {
+                // Log the entire response data to understand its structure
+                console.log('Received data:', data);
+                
+                loadingElement.style.display = 'none';
+                
+                if (data.assets && data.assets.length > 0) {
+                    // Display assets table if there are assets
+                    displayAssets(data.assets);
+                    tableElement.style.display = 'table';
+                    noAssetsElement.style.display = 'none'; // Hide 'No Assets' message if assets exist
+                } else {
+                    // Show no assets message if no assets are returned
+                    noAssetsElement.style.display = 'block';
+                    tableElement.style.display = 'none'; // Hide table when there are no assets
+                }
+            })
+            .catch(error => {
+                loadingElement.style.display = 'none';
+                errorElement.textContent = 'Error loading assets: ' + error.message;
+                errorElement.style.display = 'block';
+                console.error('Error:', error);
+            });
+        }
+    
+        function displayAssets(assets) {
+            const tableBody = document.getElementById('assets-table-body');
+            tableBody.innerHTML = ''; // Clear existing rows
+            
+            assets.forEach(asset => {
+                const row = document.createElement('tr');
+                
+                // Create and populate cells
+                const nameCell = document.createElement('td');
+                nameCell.textContent = asset.asset_name;
+                
+                const statusCell = document.createElement('td');
+                statusCell.textContent = asset.status;
+                
+                const dateCell = document.createElement('td');
+                dateCell.textContent = asset.requested_date;
+                
+                // Add cells to row
+                row.appendChild(nameCell);
+                row.appendChild(statusCell);
+                row.appendChild(dateCell);
+                
+                // Add row to table
+                tableBody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Asset</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+            position: fixed;
+        }
+        .sidebar a {
+            padding: 15px;
+            display: block;
+            color: white;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+        .content {
+            margin-left: 250px;
+            width: 100%;
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="sidebar">
+        <h4 class="text-center">Employee Panel</h4>
+        <a href="empdash.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="empasset.html"><i class="fas fa-box"></i> My Assets</a>
+        <a href="empreq.html"><i class="fas fa-file-alt"></i> Request Asset</a>
+        <a href="returnasset.html"><i class="fas fa-undo"></i> Return Asset</a>
+        <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+        <a href="logout.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="content">
+        <h2>Request New Asset</h2>
+        <form class="mt-4">
+            <div class="mb-3">
+                <label for="assetName" class="form-label">Asset Name</label>
+                <input type="text" class="form-control" id="assetName" placeholder="Enter asset name">
+            </div>
+            <div class="mb-3">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category">
+                    <option selected>Select category</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Furniture">Furniture</option>
+                    <option value="Software">Software</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="reason" class="form-label">Reason for Request</label>
+                <textarea class="form-control" id="reason" rows="3" placeholder="Explain why you need this asset"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Request</button>
+        </form>
+    </div>
+    <script>
+        document.querySelector("form").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const assetName = document.getElementById("assetName").value;
+            const category = document.getElementById("category").value;
+            const reason = document.getElementById("reason").value;
+            const employeeId = localStorage.getItem("employee_id"); // must be saved during login
+    
+            const res = await fetch("http://localhost:5000/request_asset", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    asset_name: assetName,
+                    category: category,
+                    reason: reason,
+                    employee_id: employeeId
+                })
+            });
+    
+            const result = await res.json();
+            alert(result.message);
+        });
+    </script>
+    
+</body>
+</html>

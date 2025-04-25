@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forgot Password | Asset Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(to right, #2c3e50, #4ca1af);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .forgot-container {
+            width: 400px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        .forgot-container h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .form-control {
+            border-radius: 5px;
+        }
+        .btn-primary {
+            width: 100%;
+            border-radius: 5px;
+        }
+        .links {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="forgot-container">
+        <h2>🔑 Forgot Password</h2>
+        <form onsubmit="return resetPassword(event)">
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" id="email" class="form-control" placeholder="Enter registered email" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Reset Password</button>
+            <div class="links">
+                <a href="log.html">Back to Login</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function resetPassword(event) {
+            event.preventDefault();
+            alert("🔄 Password reset link sent! Redirecting to Login...");
+            window.location.href = "login.html";
+        }
+    </script>
+
+</body>
+</html>

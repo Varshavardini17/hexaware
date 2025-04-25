@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+            position: fixed;
+        }
+        .sidebar a {
+            padding: 15px;
+            display: block;
+            color: white;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+        .content {
+            margin-left: 250px;
+            width: 100%;
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="sidebar">
+        <h4 class="text-center">Employee Panel</h4>
+        <a href="empdash.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="empasset.html"><i class="fas fa-box"></i> My Assets</a>
+        <a href="empreq.html"><i class="fas fa-file-alt"></i> Request Asset</a>
+        <a href="returnasset.html"><i class="fas fa-undo"></i> Return Asset</a>
+        <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+        <a href="logout.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+    
+    <div class="content">
+        <h2>Welcome, Employee</h2>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-3 text-center">
+                    <h5>Total Assets Assigned</h5>
+                    <h3>5</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 text-center">
+                    <h5>Pending Asset Requests</h5>
+                    <h3>2</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 text-center">
+                    <h5>Approved Asset Requests</h5>
+                    <h3>3</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h4>Recent Asset Requests</h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Asset Name</th>
+                        <th>Status</th>
+                        <th>Requested Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>101</td>
+                        <td>Laptop</td>
+                        <td><span class="badge bg-warning">Pending</span></td>
+                        <td>April 2, 2025</td>
+                    </tr>
+                    <tr>
+                        <td>102</td>
+                        <td>Headset</td>
+                        <td><span class="badge bg-success">Approved</span></td>
+                        <td>April 1, 2025</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const empName = localStorage.getItem("employeeName") || "Employee";
+            const empId = localStorage.getItem("employeeId");
+    
+            // Update welcome message
+            document.querySelector("h2").textContent = `Welcome, ${empName}`;
+    
+            // Fetch real dashboard data from backend
+            fetch(`http://localhost:5000/emp-dashboard-data?id=${empId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update card values
+                    document.querySelectorAll(".card h3")[0].textContent = data.totalAssets;
+                    document.querySelectorAll(".card h3")[1].textContent = data.pendingRequests;
+                    document.querySelectorAll(".card h3")[2].textContent = data.approvedRequests;
+    
+                    // Populate recent requests table
+                    const tableBody = document.querySelector("tbody");
+                    tableBody.innerHTML = "";
+                    data.recentRequests.forEach(req => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${req.id}</td>
+                            <td>${req.assetName}</td>
+                            <td><span class="badge bg-${req.status === 'Approved' ? 'success' : 'warning'}">${req.status}</span></td>
+                            <td>${req.requestedDate}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(err => console.error("Error loading dashboard data:", err));
+        });
+    </script>
+        
+    
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!-- Return Asset Page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Asset</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+            position: fixed;
+        }
+        .sidebar a {
+            padding: 15px;
+            display: block;
+            color: white;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+        .content {
+            margin-left: 250px;
+            width: 100%;
+            padding: 20px;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h4 class="text-center">Employee Panel</h4>
+        <a href="empdash.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="my_assets.html"><i class="fas fa-box"></i> My Assets</a>
+        <a href="request_asset.html"><i class="fas fa-file-alt"></i> Request Asset</a>
+        <a href="return_asset.html"><i class="fas fa-undo"></i> Return Asset</a>
+        <a href="report_issue.html"><i class="fas fa-exclamation-circle"></i> Report Issue</a>
+        <a href="logout.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+    <div class="content">
+        <h2>Return an Asset</h2>
+        <div class="card p-4">
+            <form>
+                <div class="mb-3">
+                    <label class="form-label">Select Asset</label>
+                    <select class="form-control">
+                        <option>-- Select Assigned Asset --</option>
+                        <option>Laptop - Dell XPS 15</option>
+                        <option>Monitor - HP 24"</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Return Reason</label>
+                    <textarea class="form-control" rows="3" placeholder="Explain the reason for return"></textarea>
+                </div>
+                <button type="submit" class="btn btn-danger">Submit Return Request</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+
+<!-- Report Issue Page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Asset Issue</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h4 class="text-center">Employee Panel</h4>
+        <a href="empdash.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="empasset.html"><i class="fas fa-box"></i> My Assets</a>
+        <a href="empreq.html"><i class="fas fa-file-alt"></i> Request Asset</a>
+        <a href="returnasset.html"><i class="fas fa-undo"></i> Return Asset</a>
+        <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+        <a href="logout.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+    <div class="content">
+        <h2>Report an Issue</h2>
+        <div class="card p-4">
+            <form>
+                <div class="mb-3">
+                    <label class="form-label">Select Asset</label>
+                    <select class="form-control">
+                        <option>-- Select Asset --</option>
+                        <option>Laptop - Dell XPS 15</option>
+                        <option>Monitor - HP 24"</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Issue Description</label>
+                    <textarea class="form-control" rows="3" placeholder="Describe the issue in detail"></textarea>
+                </div>
+                <button type="submit" class="btn btn-warning">Submit Issue Report</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        const empId = localStorage.getItem("employee_id");
+    
+        // Load employee's allocated assets
+        fetch("http://localhost:5000/get_allocated_assets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ employee_id: empId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const select = document.querySelector("select");
+            select.innerHTML = '<option disabled selected>-- Select Assigned Asset --</option>';
+            data.assets.forEach(asset => {
+                const option = document.createElement("option");
+                option.value = asset.id;
+                option.textContent = asset.name;
+                select.appendChild(option);
+            });
+        });
+    
+        // Handle form submission
+        document.querySelector("form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const assetId = document.querySelector("select").value;
+            const reason = document.querySelector("textarea").value;
+    
+            if (!assetId) {
+                alert("Please select an asset to return.");
+                return;
+            }
+    
+            const confirmReturn = confirm("Are you sure you want to return and delete this asset?");
+            if (!confirmReturn) return;
+    
+            const res = await fetch("http://localhost:5000/return_asset", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ asset_id: assetId })
+            });
+    
+            const result = await res.json();
+            alert(result.message);
+            location.reload();
+        });
+    </script>
+    
+</body>
+</html>
