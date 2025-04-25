@@ -9,8 +9,8 @@ def connect_db():
     try:
         conn = pyodbc.connect(
             'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=localhost;'
-            'DATABASE=assetmanage;'
+            'SERVER=DESKTOP112\\MSSQLSERVER02;'
+            'DATABASE=assetmanage1;'
             'Trusted_Connection=yes;'
         )
         print("✅ Connected to the database.")
@@ -23,30 +23,32 @@ def connect_db():
 def home():
     return "Welcome to Asset Management Backend!"
 
-@app.route('/signup', methods=['POST'])
+@app.route('/signup', methods=['GET','POST'])
 def signup():
-    data = request.form
-    name = data.get('name')
-    email = data.get('email')
-    password_input = data.get('password')
-    department = data.get('department', 'General')
+    if request.method == 'GET':
+        return render_template('signup.html')
+    elif request.method=='POST':
+        data = request.form
+        name = data.get('name')
+        email = data.get('email')
+        password_input = data.get('password')
+        department = data.get('department', 'General')
 
-    conn = connect_db()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO employees (name, email, password, department) VALUES (?, ?, ?, ?)",
-                (name, email, password_input, department)
-            )
-            conn.commit()
-            return jsonify({"message": "Signup successful!"})
-        except Exception as e:
-            return jsonify({"message": f"Signup failed: {str(e)}"}), 500
-        finally:
-            conn.close()
-    else:
-        return jsonify({"message": "Database connection error"}), 500
+        conn = connect_db()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO employees (name, email, password, department) VALUES (?, ?, ?, ?)",
+                    (name, email, password_input, department))
+                conn.commit()
+                return jsonify({"message": "Signup successful!"})
+            except Exception as e:
+                return jsonify({"message": f"Signup failed: {str(e)}"}), 500
+            finally:
+                conn.close()
+        else:
+            return jsonify({"message": "Database connection error"}), 500
 
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -237,6 +239,22 @@ def return_asset():
             conn.close()
     else:
         return jsonify({"message": "Database connection error"}), 500
+    
+@app.route('/test_db')
+def test_db():
+    conn = connect_db()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            result = cursor.fetchone()
+            return jsonify({"message": "Database is connected!", "result": result[0]})
+        except Exception as e:
+            return jsonify({"message": f"Query failed: {str(e)}"}), 500
+        finally:
+            conn.close()
+    else:
+        return jsonify({"message": "Database connection failed"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
