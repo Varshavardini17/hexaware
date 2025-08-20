@@ -1,0 +1,282 @@
+CODE:
+
+
+-----------------TASK 1 SETUP DATABASE &SCHEMA-------
+CREATE DATABASE SALES_DB1;
+USE DATABASE SALES_DB1;
+
+CREATE SCHEMA RAW_SCHEMA;
+USE SCHEMA RAW_SCHEMA;
+
+
+CREATE OR REPLACE FILE FORMAT csv_format
+TYPE = 'CSV'
+FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+SKIP_HEADER = 1
+NULL_IF = ('NULL', 'null', '');
+
+CREATE OR REPLACE FILE FORMAT parquet_format
+TYPE = 'PARQUET';
+
+
+CREATE OR REPLACE STAGE sales_stage
+FILE_FORMAT = (FORMAT_NAME = csv_format);
+
+
+
+-----------TASK 2 LOAD RAW DATA-------------------
+
+CREATE OR REPLACE TABLE sales_raw1 (
+transaction_id VARCHAR,
+region VARCHAR,
+country VARCHAR,
+product VARCHAR,
+customer VARCHAR,
+sales_rep VARCHAR,
+transaction_date VARCHAR,
+timestamp VARCHAR,
+quantity STRING,
+unit_price STRING,
+total_amount VARCHAR,
+order_status VARCHAR,
+payment_method VARCHAR,
+product_details VARIANT,
+customer_info VARIANT
+);
+
+COPY INTO sales_raw1
+FROM @sales_stage/sales_data_dirty.csv
+FILE_FORMAT = (FORMAT_NAME = csv_format)
+ON_ERROR = 'CONTINUE';
+
+
+-----------TASK 3 DATA QUALITY CHECKS------------
+
+SELECT COUNT(*) AS total_transactions FROM sales_raw1;
+
+SELECT COUNT(*) AS negative_amounts
+FROM sales_raw1
+WHERE TRY_TO_NUMBER(total_amount) < 0;
+
+
+-------TASK 4 FLATTEN JSON DATA------------
+SELECT
+product_details:"product_id"::STRING AS product_id,
+product_details:"product_name"::STRING AS product_name,
+product_details:"category"::STRING AS category
+FROM sales_raw1;
+
+SELECT
+
+customer_info:"customer_id"::STRING AS customer_id,
+customer_info:"customer_name"::STRING AS customer_name,
+customer_info:"region"::STRING AS region
+FROM sales_raw1;
+
+--------TASK 5 CLEAN AND TRANSFORM-------------
+
+CREATE OR REPLACE TABLE RAW_SCHEMA.sales_clean AS
+SELECT
+transaction_id,
+region,
+country,
+product,
+customer,
+sales_rep,
+TRY_TO_DATE(transaction_date, 'YYYY-MM-DD') AS transaction_date,
+
+TRY_TO_TIMESTAMP(timestamp, 'YYYY-MM-DD HH24:MI:SS') AS transaction_ts,
+
+CASE WHEN TRY_TO_NUMBER(quantity) >= 0 THEN TRY_TO_NUMBER(quantity) ELSE NULL END AS quantity,
+CASE WHEN TRY_TO_NUMBER(unit_price) >= 0 THEN TRY_TO_NUMBER(unit_price) ELSE NULL END AS unit_price,
+CASE WHEN TRY_TO_NUMBER(total_amount) >= 0 THEN TRY_TO_NUMBER(total_amount) ELSE NULL END AS total_amount,
+order_status,
+payment_method,
+product_details,
+customer_info
+
+FROM sales_raw1
+WHERE transaction_id IS NOT NULL
+AND product IS NOT NULL
+AND customer IS NOT NULL;
+
+---------TASK 6 FEATURE ENGINEERING
+
+ALTER TABLE RAW_SCHEMA.sales_clean
+ADD (
+profit_margin FLOAT,
+sales_quarter STRING
+);
+
+UPDATE RAW_SCHEMA.sales_clean
+SET
+profit_margin = CASE
+WHEN unit_price IS NOT NULL AND quantity IS NOT NULL AND total_amount IS NOT NULL AND (unit_price * quantity) != 0
+THEN ROUND((total_amount - (unit_price * quantity)) / (unit_price * quantity), 2)
+ELSE NULL
+END,
+
+sales_quarter = CASE
+WHEN transaction_date IS NOT NULL
+THEN 'Q' || TO_CHAR(transaction_date, 'Q') || '-' || TO_CHAR(transaction_date, 'YYYY')
+ELSE NULL
+END;
+
+
+--------TASK 7 CREATE FACT AND DIMENSION TABLES------
+
+CREATE OR REPLACE TABLE DIM_REGION AS
+SELECT DISTINCT
+region,
+country
+FROM RAW_SCHEMA.sales_clean
+WHERE region IS NOT NULL AND country IS NOT NULL;
+
+CREATE OR REPLACE TABLE DIM_PRODUCT AS
+SELECT DISTINCT
+product,
+product_details:"brand"::STRING AS brand,
+product_details:"category"::STRING AS category
+FROM RAW_SCHEMA.sales_clean
+WHERE product IS NOT NULL;
+
+CREATE OR REPLACE TABLE DIM_CUSTOMER AS
+SELECT DISTINCT
+customer,
+customer_info:"segment"::STRING AS segment,
+customer_info:"age_group"::STRING AS age_group,
+customer_info:"region"::STRING AS customer_region
+FROM RAW_SCHEMA.sales_clean
+WHERE customer IS NOT NULL;
+
+CREATE OR REPLACE TABLE FACT_SALES AS
+SELECT
+transaction_id,
+transaction_date,
+transaction_ts,
+product,
+customer,
+region,
+country,
+quantity,
+unit_price,
+total_amount,
+profit_margin,
+sales_quarter,
+order_status,
+payment_method
+FROM RAW_SCHEMA.sales_clean
+WHERE transaction_id IS NOT NULL;
+
+
+------------TASK 8 REPORTING---------------
+Run queries:
+1. Sales by Region
+2. Customer Segment Analysis
+3. Product Brand Performance
+4. Order Status Distribution
+Question 14: Which region had the highest sales?
+Question 15: Which product brand has the best rating-to-sales ratio?
+
+
+1.
+SELECT
+region,
+country,
+SUM(total_amount) AS total_sales,
+COUNT(transaction_id) AS transactions
+FROM FACT_SALES
+GROUP BY region,country
+ORDER BY total_sales DESC;
+
+2.
+SELECT
+dc.segment,
+COUNT(fs.transaction_id) AS total_orders,
+SUM(fs.total_amount) AS total_sales
+FROM FACT_SALES fs
+JOIN DIM_CUSTOMER dc ON fs.customer = dc.customer
+GROUP BY dc.segment
+ORDER BY total_sales DESC;
+
+3.
+SELECT
+dp.brand,
+dp.category,
+COUNT(fs.transaction_id) AS total_orders,
+SUM(fs.total_amount) AS total_sales
+FROM FACT_SALES fs
+JOIN DIM_PRODUCT dp ON fs.product = dp.product
+GROUP BY dp.brand, dp.category
+ORDER BY total_sales DESC;
+
+4.
+SELECT
+order_status,
+COUNT(*) AS order_count,
+ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM FACT_SALES), 2) AS percentage
+FROM FACT_SALES
+GROUP BY order_status
+ORDER BY order_count DESC;
+
+SELECT
+region,
+SUM(total_amount) AS total_sales
+FROM FACT_SALES
+GROUP BY region
+ORDER BY total_sales DESC
+LIMIT 1;
+
+SELECT
+dp.brand,
+ROUND(AVG(dp.rating), 2) AS avg_rating,
+SUM(fs.total_amount) AS total_sales,
+ROUND(AVG(dp.rating) / NULLIF(SUM(fs.total_amount), 0), 4) AS rating_to_sales_ratio
+FROM FACT_SALES fs
+JOIN DIM_PRODUCT dp ON fs.product = dp.product
+GROUP BY dp.brand
+ORDER BY rating_to_sales_ratio DESC
+LIMIT 1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
